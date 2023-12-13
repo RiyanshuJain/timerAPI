@@ -1,16 +1,25 @@
 // to run the file use nodemon .\timerServer.js or node .\timerServer.js
 
-const express = require('express');
-const cors = require('cors');
+const express = require("express");
+const cors = require("cors");
 
 // Initializing the app
 const app = express();
+var dotenv = require("dotenv");
+const mongoDB = require("./config/db");
+const User = require("./models/userModel");
+const colors = require("colors");
 
 // Setting up CORS
-app.use(cors({
-    origin: 'http://localhost:3000' // Allow requests from localhost:3000
-  }));
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Allow requests from localhost:3000
+  })
+);
 app.use(express.json());
+
+dotenv.config();
+mongoDB();
 
 const PORT = 3001; // Choose a port number
 
@@ -24,18 +33,18 @@ let timerStartTime = null;
 let countdown = 0;
 
 // Starting the timer
-app.post('/start-timer', (req, res) => {
+app.post("/start-timer", (req, res) => {
   const { time } = req.body;
 
   if (isTimerRunning) {
-    return res.status(400).send({ message: 'Timer already running' });
+    return res.status(400).send({ message: "Timer already running" });
   }
 
-  console.log(typeof time)
+  console.log(typeof time);
 
   // Validate time input
-  if (typeof time !== 'number' || time <= 0) {
-    return res.status(400).send({ message: 'Invalid time value' });
+  if (typeof time !== "number" || time <= 0) {
+    return res.status(400).send({ message: "Invalid time value" });
   }
 
   countdown = time;
@@ -51,37 +60,62 @@ app.post('/start-timer', (req, res) => {
       timer = null;
 
       // Trigger notification or perform desired action
-      console.log('Timer has ended!');
+      console.log("Timer has ended!");
     }
   }, 100); // Check every 100 milliseconds
 
-  res.send({ message: 'Timer started' });
+  res.send({ message: "Timer started" });
 });
 
 // Getting the remaining time
-app.get('/remaining-time', (req, res) => {
+app.get("/remaining-time", (req, res) => {
   if (!isTimerRunning) {
-    res.send({ message: 'Timer not running' });
+    res.send({ message: "Timer not running" });
     return;
   }
 
-  const remainingTime =  countdown - (Date.now() - timerStartTime);
+  const remainingTime = countdown - (Date.now() - timerStartTime);
   res.send({ remainingTime });
 });
 
 // Stopping the timer
-app.post('/stop-timer', (req, res) => {
+app.post("/stop-timer", (req, res) => {
   if (!isTimerRunning) {
-    return res.send({ message: 'Timer already stopped' });
+    return res.send({ message: "Timer already stopped" });
   }
 
   isTimerRunning = false;
   clearInterval(timer);
   timer = null;
 
-  res.send({ message: 'Timer stopped' });
+  res.send({ message: "Timer stopped" });
 });
 
+app.post("/add-pin", async (req, res) => {
+  if (req.body._id && req.body.pin) {
+    const user = new User(req.body);
+    let result = await user.save();
+    if (result) {
+      res.send(result);
+    } else {
+      res.status(404).send("Something went wrong");
+    }
+  }
+});
+
+app.get("/get-pin", async (req, res) => {
+  if (req.body._id && req.body.pin) {
+    let user = new User(req.body);
+    let result = await User.findOne({ _id: req.body._id });
+    if (result.pin === req.body.pin) {
+      res.status(200).send("authenticated");
+    } else {
+      res.status(404).send("not authenticated");
+    }
+  } else {
+    res.status(403).send("please enter all the required crediatials");
+  }
+});
 // Listening to the port
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
