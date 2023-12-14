@@ -92,7 +92,7 @@ app.post("/stop-timer", (req, res) => {
 });
 
 app.post("/add-pin", async (req, res) => {
-  if (req.body._id && req.body.pin) {
+  if (req.body.address && req.body.pin) {
     const user = new User(req.body);
     let result = await user.save();
     if (result) {
@@ -104,9 +104,9 @@ app.post("/add-pin", async (req, res) => {
 });
 
 app.get("/get-pin", async (req, res) => {
-  if (req.body._id && req.body.pin) {
+  if (req.body.adddress && req.body.pin) {
     let user = new User(req.body);
-    let result = await User.findOne({ _id: req.body._id });
+    let result = await User.findOne({ address: req.body.address });
     if (result.pin === req.body.pin) {
       res.status(200).send("authenticated");
     } else {
