@@ -96,24 +96,20 @@ app.post("/add-pin", async (req, res) => {
     const user = new User(req.body);
     let result = await user.save();
     if (result) {
-      res.send(result);
+      res.status(200).send(result);
     } else {
       res.status(404).send("Something went wrong");
     }
   }
 });
 
-app.get("/get-pin", async (req, res) => {
-  if (req.body.adddress && req.body.pin) {
-    let user = new User(req.body);
-    let result = await User.findOne({ address: req.body.address });
-    if (result.pin === req.body.pin) {
-      res.status(200).send("authenticated");
-    } else {
-      res.status(404).send("not authenticated");
-    }
+app.get("/get-pin/:id/:pin", async (req, res) => {
+  const query = { address: { $regex: new RegExp(req.params.id, "i") } };
+  let result = await User.findOne(query);
+  if (result.pin == req.params.pin) {
+    res.status(200).json(result);
   } else {
-    res.status(403).send("please enter all the required crediatials");
+    res.status(404).send("not authenticated");
   }
 });
 // Listening to the port
