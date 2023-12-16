@@ -9,6 +9,8 @@ var dotenv = require("dotenv");
 const mongoDB = require("./config/db");
 const User = require("./models/userModel");
 const colors = require("colors");
+const fs = require("fs").promises;
+const compareImages = require("resemblejs/compareImages");
 
 // Setting up CORS
 app.use(
@@ -112,6 +114,39 @@ app.get("/get-pin/:id/:pin", async (req, res) => {
     res.status(404).send("not authenticated");
   }
 });
+
+app.post("/api/image-similarity", async (req, res) => {
+  try {
+    const options = {
+      output: {
+        errorColor: {
+          red: 255,
+          green: 0,
+          blue: 255,
+        },
+        errorType: "movement",
+        transparency: 0.3,
+        largeImageThreshold: 1200,
+        useCrossOrigin: false,
+        outputDiff: true,
+      },
+      scaleToSameSize: true,
+      ignore: "antialiasing",
+    };
+
+    const data = await compareImages(
+      await fs.readFile("image1.jpg"),
+      await fs.readFile("image2.jpg"),
+      options
+    );
+
+    console.log(data);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Listening to the port
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
