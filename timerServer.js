@@ -11,6 +11,10 @@ const User = require("./models/userModel");
 const colors = require("colors");
 const fs = require("fs").promises;
 const compareImages = require("resemblejs/compareImages");
+const axios = require("axios");
+const multer = require("multer");
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Setting up CORS
 app.use(
@@ -115,8 +119,79 @@ app.get("/get-pin/:id/:pin", async (req, res) => {
   }
 });
 
-app.post("/api/image-similarity", async (req, res) => {
+// app.post("/api/image-similarity", async (req, res) => {
+//   try {
+//     const { imageUrl1, imageUrl2 } = req.body;
+
+//     if (!imageUrl1 || !imageUrl2) {
+//       return res
+//         .status(400)
+//         .json({ error: "Please provide both imageUrl1 and imageUrl2" });
+//     }
+
+//     const image1Response = await axios.get(imageUrl1, {
+//       responseType: "arraybuffer",
+//     });
+//     const image2Response = await axios.get(imageUrl2, {
+//       responseType: "arraybuffer",
+//     });
+
+//     const image1Buffer = Buffer.from(image1Response.data, "binary");
+//     const image2Buffer = Buffer.from(image2Response.data, "binary");
+//     // console.log(image1Buffer);
+//     const options = {
+//       output: {
+//         errorColor: {
+//           red: 255,
+//           green: 0,
+//           blue: 255,
+//         },
+//         errorType: "movement",
+//         transparency: 0.3,
+//         largeImageThreshold: 1200,
+//         useCrossOrigin: false,
+//         outputDiff: true,
+//       },
+//       scaleToSameSize: true,
+//       ignore: "antialiasing",
+//     };
+//     console.log(image1Buffer);
+//     console.log("*****************************************");
+//     console.log(image2Buffer);
+//     const data = await compareImages(image1Buffer, image2Buffer, options);
+//     // const data = await compareImages(
+//     //   await fs.readFile("image1.jpg"),
+//     //   await fs.readFile("image2.jpg"),
+//     //   options
+//     // );
+
+//     if (data && data.misMatchPercentage > 30) {
+//       res.status(403).json({ result: "not matching" });
+//     } else {
+//       res.status(200).json({ result: "matched" });
+//     }
+
+//     // console.log(data.misMatchPercentage);
+//     // res.json(data);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+app.post("/api/upload", upload.single("imageFile"), async (req, res) => {
   try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const { ipfs } = req.body;
+    const ipfsImageResponse = await axios.get(ipfs, {
+      responseType: "arraybuffer",
+    });
+
+    const liveImage = req.file.buffer;
+    const ipfsImage = Buffer.from(ipfsImageResponse.data, "binary");
+
     const options = {
       output: {
         errorColor: {
@@ -134,14 +209,12 @@ app.post("/api/image-similarity", async (req, res) => {
       ignore: "antialiasing",
     };
 
-    const data = await compareImages(
-      await fs.readFile("image1.jpg"),
-      await fs.readFile("image2.jpg"),
-      options
-    );
-
-    console.log(data);
-    res.json(data);
+    const data = await compareImages(liveImage, ipfsImage, options);
+    if (data && data.misMatchPercentage > 30) {
+      res.status(403).json({ result: "not matching" });
+    } else {
+      res.status(200).json({ result: "matched" });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
