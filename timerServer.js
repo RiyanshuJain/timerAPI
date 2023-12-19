@@ -13,16 +13,25 @@ const fs = require("fs").promises;
 const compareImages = require("resemblejs/compareImages");
 const axios = require("axios");
 const multer = require("multer");
+const nodeWebCam = require("node-webcam");
+const path = require("path");
+const { Camera, capture, VideoCapture } = require("camera-capture");
+const { exec } = require("child_process");
+const bodyParser = require("body-parser");
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 // Setting up CORS
-app.use(
-  cors({
-    origin: "http://localhost:3000", // Allow requests from localhost:3000
-  })
-);
+app.use(cors());
+// app.use(
+//   cors({
+//     origin: ["http://localhost:3000", "http://localhost:5500"], // Allow requests from localhost:3000
+//   })
+// );
 app.use(express.json());
+app.use(express.static("images"));
+// app.use(express.static("public")); // Serving static files from 'public' folder
+app.use(bodyParser.json());
 
 dotenv.config();
 mongoDB();
@@ -219,6 +228,82 @@ app.post("/api/upload", upload.single("imageFile"), async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+var options = {
+  width: 1280,
+  height: 720,
+  quality: 100,
+  delay: 1,
+  saveShots: true,
+  output: "jpeg",
+  device: false,
+  callbackReturn: "location",
+};
+var webcam = nodeWebCam.create(options);
+const videoCapture = new VideoCapture();
+// const camera = new Camera();
+
+// app.get("/api/capture-image", async (req, res) => {
+//   try {
+//     // Execute fswebcam command to capture an image
+//     exec(
+//       "fswebcam -r 1280x720 --no-banner /tmp/captured_image.jpg",
+//       async (error, stdout, stderr) => {
+//         if (error) {
+//           console.error("Error:", error);
+//           res.status(500).json({ error: "Error capturing image" });
+//           return;
+//         }
+
+//         // Read the captured image
+//         const imageData = await fs.readFile("/tmp/captured_image.jpg");
+
+//         // Serve the captured image as a response
+//         res.set("Content-Type", "image/jpeg");
+//         res.send(imageData);
+//       }
+//     );
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).json({ error: "Error capturing image" });
+//   }
+// });
+
+app.post("/save-photo", (req, res) => {
+  const { photoData } = req.body;
+  // Handle the received photoData (e.g., save it to a file, process it, etc.)
+  // Example base64-encoded image string
+  const base64Image = photoData; // Replace with your actual base64 image data
+
+  // Remove the header (e.g., 'data:image/jpeg;base64,') from the base64 string
+  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+
+  // Convert the base64 string to a buffer
+  const imageBuffer = Buffer.from(base64Data, "base64");
+
+  console.log("Converted image to buffer:", imageBuffer);
+
+  // console.log("Received photo data:", photoData);
+  res.json({ result: imageBuffer });
+});
+
+// app.get("/api/capture-image", (req, res) => {
+//   try {
+//     Webcam.capture("test_picture", (err, data) => {
+//       if (err) {
+//         console.error(err);
+//         res.status(500).json({ error: "Error capturing image" });
+//         return;
+//       }
+
+//       console.log("Image captured:", data);
+//       res.json({ message: "Image captured successfully", imagePath: data });
+//     });
+//   } catch (error) {
+//     console.error("Error:", error);
+//     res.status(500).json({ error: "Unexpected error occurred" });
+//   }
+// });
 
 // Listening to the port
 app.listen(PORT, () => {

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Capture Photo</title>
+  </head>
+  <body>
+    <h1>Photo Capture</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="captureButton">Capture Photo</button>
+    <canvas id="canvas" style="display: none"></canvas>
+
+    <script>
+      // Access user's camera and display video stream
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then(function (stream) {
+          const video = document.getElementById("video");
+          video.srcObject = stream;
+          video.play();
+        })
+        .catch(function (err) {
+          console.error("Error accessing camera:", err);
+        });
+
+      // Function to capture photo on button click
+      document
+        .getElementById("captureButton")
+        .addEventListener("click", async function () {
+          const video = document.getElementById("video");
+          const canvas = document.getElementById("canvas");
+          const context = canvas.getContext("2d");
+
+          // Set canvas dimensions to match video dimensions
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+
+          // Draw the current video frame onto the canvas
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Convert the canvas content to a data URL representing the captured image
+          const dataURL = canvas.toDataURL("image/jpeg");
+          console.log("Captured image data:", dataURL);
+
+          // Perform any action with the captured image data (e.g., send it to the server)
+          // Here, you can make an HTTP POST request to your Express app to send the captured image data
+          let result = await fetch("http://localhost:3001/save-photo", {
+            method: "POST",
+            headers: {
+              "Content-Type": "Application/Json",
+            },
+            body: JSON.stringify({ photoData: dataURL }),
+          });
+
+          console.log(result);
+          // Example using fetch:
+          //   fetch("http:localhost:3001/save-photo", {
+          //     method: "POST",
+          //     headers: { "Content-Type": "application/json" },
+          //     body: JSON.stringify({ photoData: dataURL }),
+          //   })
+          //     .then((response) => {
+          //       console.log("Photo sent to the server");
+          //       // Handle the response from the server if needed
+          //     })
+          //     .catch((error) => {
+          //       console.error("Error sending photo to the server:", error);
+          //     });
+        });
+    </script>
+  </body>
+</html>
