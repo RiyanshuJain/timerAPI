@@ -187,19 +187,47 @@ app.get("/get-pin/:id/:pin", async (req, res) => {
 //   }
 // });
 
-app.post("/api/upload", upload.single("imageFile"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+const captureLiveImage = async () => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
 
-    const { ipfs } = req.body;
-    const ipfsImageResponse = await axios.get(ipfs, {
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        video.srcObject = stream;
+        video.play();
+
+        video.addEventListener("click", () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          context.drawImage(video, 0, 0);
+
+          const dataURL = canvas.toDataURL("image/jpeg");
+          const liveImage = Buffer.from(dataURL.split(",")[1], "base64");
+
+          resolve(liveImage);
+        });
+      })
+      .catch((error) => {
+        console.log("error here")
+        reject(error);
+      });
+  });
+};
+
+app.post("/api/compare-images", async (req, res) => {
+  try {
+    const ipfsImgLink = req.body.ipfsLink;
+    const liveImgData = req.body.imageData;
+    
+    const ipfsImageResponse = await axios.get(ipfsImgLink, {
       responseType: "arraybuffer",
     });
-
-    const liveImage = req.file.buffer;
     const ipfsImage = Buffer.from(ipfsImageResponse.data, "binary");
+    
+    const liveImage = Buffer.from(liveImgData, "base64");
 
     const options = {
       output: {
@@ -304,6 +332,13 @@ app.post("/save-photo", (req, res) => {
 //     res.status(500).json({ error: "Unexpected error occurred" });
 //   }
 // });
+
+app.use(express.static("public")); // Assuming `index.html` is in a "public" folder
+
+// Catch-all route to serve `index.html` for any other request
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 // Listening to the port
 app.listen(PORT, () => {

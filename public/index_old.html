@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Capture Photo</title>
+  </head>
+  <body>
+    <h1>Photo Capture</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="captureButton">Capture Photo</button>
+
+    <script>
+      // const voterImgLink = localStorage.getItem("voterImgLink");
+      // console.log(voterImgLink);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const voterImgLink = urlParams.get("voterImgLink");
+
+      const video = document.getElementById("video");
+      const captureButton = document.getElementById("captureButton");
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          video.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error("Error accessing camera:", error);
+        });
+
+      captureButton.addEventListener("click", async () => {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+
+        const dataURL = canvas.toDataURL("image/jpeg");
+        const imageData = dataURL.split(",")[1];
+
+        // const voterImgLink = localStorage.getItem("voterImgLink");
+        // console.log(imageData);
+        // console.log(voterImgLink);
+
+        try {
+          const response = await fetch("http://localhost:3001/api/compare-images", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              ipfsLink: voterImgLink,
+              imageData,
+            }),
+          });
+
+          const result = await response.json();
+          console.log("Image comparison result:", result);
+          // return result;
+          // Handle the API response (e.g., display success or failure message)
+          // Close the window and return the result
+          window.opener.postMessage(result, "http://localhost:3000"); // Pass result back to parent window
+          window.close();
+        } catch (error) {
+          console.error("Error sending image to API:", error);
+          // Close the window and return undefined
+          window.opener.processImageComparisonResult(undefined); // Indicate error to parent window
+          window.close();
+        }
+      });
+    </script>
+  </body>
+</html>
